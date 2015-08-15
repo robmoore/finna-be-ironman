@@ -59,7 +59,7 @@ pml_testing.data <- preProcessData("data/pml-testing.csv")
 pml_testing.pred <- predict(modFit, pml_testing.data)
 
 dir.create("results")
-pml_write_files(rep("A", 20))
+#pml_write_files(rep("A", 20))
 pml_write_files(pml_testing.pred)
 
 ---
