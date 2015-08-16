@@ -5,18 +5,10 @@ date: "08/16/2015"
 output: html_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+> Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please > constrain the text of the writeup to < 2000 words and the number of figures to be less than 5.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+> Does the submission build a machine learning algorithm to predict activity quality from activity monitors?
+> To evaluate the HTML file you may have to download the repo and open the compiled HTML document. 
 
-```{r}
-summary(cars)
-```
+> Do the authors describe what they expect the out of sample error to be and estimate the error appropriately with cross-validation?
 
-You can also embed plots, for example:
-
-```{r, echo=FALSE}
-plot(cars)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
