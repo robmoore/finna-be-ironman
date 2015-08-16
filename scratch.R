@@ -64,14 +64,6 @@ pml_write_files(pml_testing.pred)
 
 ---
 
-#inTraining <- createDataPartition(mydata$FLAG, p=0.6, list=FALSE)
-#training.set <- mydata[inTraining,]
-#Totalvalidation.set <- mydata[-inTraining,]
-## This will create another partition of the 40% of the data, so 20%-testing and 20%-validation
-#inValidation <- createDataPartition(Totalvalidation.set$FLAG, p=0.5, list=FALSE)
-#testing.set <- Totalvalidation.set[inValidation,]
-#validation.set <- Totalvalidation.set[-inValidation,]
-
 nzv <- nearZeroVar(data, saveMetrics=TRUE)
 nzv[order(-nzv$percentUnique),] 
 
