@@ -38,12 +38,6 @@ subsetData = function(data) {
                       names(data),
                       perl = TRUE)]
     
-  ## Find columns highly correlated with last variable (ie, yaw_forearm)
-  #cor.matrix <- cor(data[,-length(data)])
-  #highlyCorrelated <- findCorrelation(cor.matrix,  cutoff = 0.75)
-  ## Drop highly correlated columns
-  #data <- data[, -highlyCorrelated] # drops yaw_belt from this set at .75 cutoff
-  
   cat("[subsetData] Resulting dimensions: ", 
       dim(data), 
       "\n")
@@ -77,6 +71,11 @@ pml_training.data <- preProcessData("data/pml-training.csv")
 nzv <- nearZeroVar(pml_training.data, saveMetrics = TRUE)
 nzv[order(-nzv$percentUnique),] 
 
+# Find columns highly correlated with last variable (ie, yaw_forearm)
+cor.matrix <- cor(pml_training.data[, -length(pml_training.data)]) # eval all but classe column
+highlyCorrelated <- findCorrelation(cor.matrix)
+length(highlyCorrelated) # 0 == Nothing found at .9 cutoff
+
 pml_training.data <- subsetData(pml_training.data)
 
 set.seed(13413)
@@ -99,6 +98,19 @@ modFit <- train(classe ~ .,
                                          number = 5))
 Sys.time() - startTime # Time required to train model
 
+# TODO: fit model using all variables and run varImp against it
+# compare to what we get from nearZeroVar
+
+# TODO: train using top 7 predictors as rated by varImp against all vars
+# If you do, you'll get 99% accuracy rate! Well, might not exactuly
+# since I just tested this with full model but should be close.
+
+# So run against validation set and take top predictors and run it against
+# test set!!!
+
+varImp(modFit)
+varImpPlot(modFit$finalModel)
+
 # Test it against the validation set
 verbosePredict(modFit, validation.set)
 
@@ -111,17 +123,3 @@ pml_testing.pred <- predict(modFit, pml_testing.data)
 
 # Write out results of testing predication
 pml_write_files(pml_testing.pred)
-
----
-
-nzv <- nearZeroVar(data, saveMetrics=TRUE)
-nzv[order(-nzv$percentUnique),] 
-
-look at varImp and plot (varImpPlot?)
-can we plot nzv?
-
-https://github.com/vqv/ggbiplot
-
-http://stats.stackexchange.com/questions/30691/how-to-interpret-oob-and-confusion-matrix-for-random-forest
-http://www.r-bloggers.com/part-3-random-forests-and-model-selection-considerations/
-  

@@ -6,7 +6,7 @@ output: html_document
 ---
 http://groupware.les.inf.puc-rio.br/har
 
-> Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please > constrain the text of the writeup to < 2000 words and the number of figures to be less than 5.
+> Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5.
 
 > Does the submission build a machine learning algorithm to predict activity quality from activity monitors?
 > To evaluate the HTML file you may have to download the repo and open the compiled HTML document. 
@@ -19,4 +19,4 @@ http://groupware.les.inf.puc-rio.br/har
 [subsetData] Original dimensions:  19622 53 
 [subsetData] Resulting dimensions:  19622 12 
 > 12/160
-[1] 0.075
+[1] 0.075 # amount of data used to perform prediction
