@@ -4,6 +4,7 @@ author: "Rob Moore"
 date: "08/16/2015"
 output: html_document
 ---
+http://groupware.les.inf.puc-rio.br/har
 
 > Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please > constrain the text of the writeup to < 2000 words and the number of figures to be less than 5.
 
@@ -12,3 +13,10 @@ output: html_document
 
 > Do the authors describe what they expect the out of sample error to be and estimate the error appropriately with cross-validation?
 
+> pml_training.data <- subsetData(preProcessData("data/pml-training.csv"))
+[preProcessData] Original dimensions:  19622 160 
+[preProcessData] Resulting dimensions:  19622 53 
+[subsetData] Original dimensions:  19622 53 
+[subsetData] Resulting dimensions:  19622 12 
+> 12/160
+[1] 0.075
