@@ -20,3 +20,8 @@ http://groupware.les.inf.puc-rio.br/har
 [subsetData] Resulting dimensions:  19622 12 
 > 12/160
 [1] 0.075 # amount of data used to perform prediction
+
+A simple summary() was enough for me to figure out what variables had problems and which ones I should discard.
+# TODO: train using top 7 predictors as rated by varImp against all vars
+# If you do, you'll get 99% accuracy rate! Well, might not exactuly
+# since I just tested this with full model but should be close.

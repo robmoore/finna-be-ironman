@@ -26,25 +26,6 @@ preProcessData = function(x) {
   data
 }
 
-# Use the columns with the most variation
-subsetData = function(data) {
-  cat("[subsetData] Original dimensions: ", 
-      dim(data), 
-      "\n")
-  
-  data <- data[, grep(paste(c("^(roll|yaw|pitch)_",
-                              "classe"), 
-                            collapse = "|"), 
-                      names(data),
-                      perl = TRUE)]
-    
-  cat("[subsetData] Resulting dimensions: ", 
-      dim(data), 
-      "\n")
-  
-  data
-}
-
 # Function based on that provided by instructors to write out results
 pml_write_files = function(x) {
   dir.create("results", showWarnings = FALSE)
@@ -55,28 +36,20 @@ pml_write_files = function(x) {
   }
 }
 
-verbosePredict = function(modFit, data) {
-  pred <- predict(modFit, data[,-length(data)])
+timedTrain = function(data) {
+  # Create model and test it against the validation set
+  startTime <- Sys.time()
+  modFit <- train(classe ~ ., 
+                  data=data, 
+                  method="rf", 
+                  trControl = trainControl(method = "cv", 
+                                           number = 5))
+  Sys.time() - startTime # Time required to train model
   
-  # OOS rate
-  #cat("Accuracy on data set: ", 
-  #    length(which(pred == data$classe)) / length(data), 
-  #    "\n")
-  
-  confusionMatrix(data$classe, pred)
+  modFit
 }
 
 pml_training.data <- preProcessData("data/pml-training.csv")
-
-nzv <- nearZeroVar(pml_training.data, saveMetrics = TRUE)
-nzv[order(-nzv$percentUnique),] 
-
-# Find columns highly correlated with last variable (ie, yaw_forearm)
-cor.matrix <- cor(pml_training.data[, -length(pml_training.data)]) # eval all but classe column
-highlyCorrelated <- findCorrelation(cor.matrix)
-length(highlyCorrelated) # 0 == Nothing found at .9 cutoff
-
-pml_training.data <- subsetData(pml_training.data)
 
 set.seed(13413)
 
@@ -89,36 +62,41 @@ otherDP  <- createDataPartition(other.set$classe, p = 0.5, list = FALSE)
 test.set <- other.set[otherDP,]
 validation.set <- other.set[-otherDP,]
 
-# Create model and test it against the validation set
-startTime <- Sys.time()
-modFit <- train(classe ~ ., 
-                data=train.set, 
-                method="rf", 
-                trControl = trainControl(method = "cv", 
-                                         number = 5))
-Sys.time() - startTime # Time required to train model
+nzv <- nearZeroVar(train.set, saveMetrics = TRUE)
+nzv[order(-nzv$percentUnique),] 
+# Top 10 columns based on unique values > 10%
+nzvColumns <- row.names(nzv[order(-nzv$percentUnique),])[1:16]
+train.set.nzvColumns <- train.set[, c(nzvColumns, "classe")]
 
-# TODO: fit model using all variables and run varImp against it
-# compare to what we get from nearZeroVar
+# Find columns highly correlated with last variable (ie, yaw_forearm)
+cor.matrix <- cor(train.set[, -length(train.set)]) # eval all but classe column
+highlyCorrelated <- findCorrelation(cor.matrix)
+names(train.set)[highlyCorrelated] # 0 == Nothing found at .9 cutoff
 
-# TODO: train using top 7 predictors as rated by varImp against all vars
-# If you do, you'll get 99% accuracy rate! Well, might not exactuly
-# since I just tested this with full model but should be close.
-
-# So run against validation set and take top predictors and run it against
-# test set!!!
-
-varImp(modFit)
+# Create model on all columns for use with varImp
+modFit <- timedTrain(train.set)
 varImpPlot(modFit$finalModel)
+vi <- varImp(modFit$finalModel)
+# Top 7 important columns as identified by varImp
+viColumns <- row.names(vi[order(-vi$Overall),])[1:7]
+train.set.viColumns <- train.set[, c(viColumns, "classe")]
 
-# Test it against the validation set
-verbosePredict(modFit, validation.set)
+# Create model and test it against the validation set
+modFit.nzvColumns <- timedTrain(train.set.nzvColumns)
+predict.nzvColumns <- predict(modFit.nzvColumns, validation.set[, nzvColumns])
+confusionMatrix(validation.set$classe, predict.nzvColumns)
 
-# Test it against the test set
-verbosePredict(modFit, test.set)
+modFit.viColumns <- timedTrain(train.set.viColumns)
+predict.viColumns <- predict(modFit.viColumns, validation.set[, viColumns])
+confusionMatrix(validation.set$classe, predict.viColumns)
+
+# Test using viColumns
+predict.viColumns <- predict(modFit.viColumns, test.set[, viColumns])
+confusionMatrix(test.set$classe, predict.viColumns)
 
 # Generate predictions on provided test data
-pml_testing.data <- subsetData(preProcessData("data/pml-testing.csv"))
+pml_testing.data <- preProcessData("data/pml-testing.csv")
+# TODO: only predict against vi columns
 pml_testing.pred <- predict(modFit, pml_testing.data)
 
 # Write out results of testing predication
