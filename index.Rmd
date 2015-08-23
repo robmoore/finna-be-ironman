@@ -1,0 +1,127 @@
+---
+title: "Analysis of the Weight Lifting Exercises Dataset from the Human Activity Recognition Project"
+author: "Rob Moore"
+date: "08/16/2015"
+output: html_document
+bibliography: 2459256.bib
+---
+```{r echo=FALSE, message=FALSE}
+library(caret)
+library(knitr)
+
+# enable multi-core processing
+library(doParallel)
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
+readData = function(fn) {
+  read.csv(paste0("data/", fn), na.strings = c("NA", "", "#DIV/0!"))
+}
+
+preProcessData = function(data) {
+  # Drop colums that are mostly NAs (> 97.5%)
+  data <- data[, colSums(is.na(data)) < (nrow(data) * .975)]
+  # Drop book-keeping columns
+  data <- data[, -(1:7)] 
+}
+
+trainRF = function(data) {
+  train(classe ~ ., data=data, method="rf", trControl = trainControl(method = "cv", number = 5))
+}
+```
+
+# Introduction
+
+The [Human Activity Recognition Project](http://groupware.les.inf.puc-rio.br/har) undertook a study to evaluate the effectiveness of participants executing a weight-lifting task using accelerometer, gyroscope and magnetometer readings from the subjects (see [Qualitative activity recognition of weight lifting exercises](http://dx.doi.org/10.1145/2459236.2459256)). The authors of the paper refer to this as "qualitative activity recognition" and distinguish it from earlier approaches which have instead attempted to evaluate the type of activity performed. The subjects were asked to perform one set of 10 repetitions of the unilateral dumbbell biceps curl using 5 different approaches. One of these is considered correct while the rest model a set of commonly made mistakes.
+
+The data set is made up of 19622 observations and contains 160 features for each observation including one which indicates which of the 5 different methods the participant executed. 
+
+# Method
+
+Looking over the data, it became apparent that a number of features were primarily comprised of data that was inapplicable (i.e., empty strings, NA, or #DIV/0). By filtering out those columns containing more that 97.5% inapplicable entries and removing "book-keeping" columns (e.g., data which identify the names of the participants, time stamps, and the like), we were able to reduce the number of features by a third.
+
+As the data set was of sufficient size, we broke it down into a training set made up of 60%, a validation set made up of 20% of the data, and a test set using remaining 20% of the data.
+
+```{r echo=FALSE}
+
+# Overly verbose for our needs here but useful
+# rawData <- readData("pml-training.csv")
+# summary(rawData) 
+
+pml_training.data <- preProcessData(readData("pml-training.csv"))
+set.seed(13413)
+
+# 60% training
+trainDP <- createDataPartition(pml_training.data$classe, p = 0.6, list = FALSE)
+train.set <- pml_training.data[trainDP,]
+other.set <- pml_training.data[-trainDP,]
+# 20% test and 20% validation
+otherDP  <- createDataPartition(other.set$classe, p = 0.5, list = FALSE)
+test.set <- other.set[otherDP,]
+validation.set <- other.set[-otherDP,]
+```
+
+In an effort to further reduce the dimensionality of the data, we explored the data with an eye to removing features that do not provide much variability by looking at the percentage of unique values for each feature. We found that 16 features had a uniqueness factor of over 10%. 
+
+```{r xtable, results="asis", echo=FALSE}
+nzv <- nearZeroVar(train.set, saveMetrics = TRUE)
+# Top 10 columns based on unique values > 10%
+nzvColumns <- row.names(nzv)[order(-nzv$percentUnique)][1:16]
+train.set.nzvColumns <- train.set[, c(nzvColumns, "classe")]
+kable(data.frame(Column=row.names(nzv[order(-nzv$percentUnique),]), Uniqueness=nzv[order(-nzv$percentUnique),]$percentUnique))
+```
+
+We also decided to evaluate the features that contributed most greatly to the analysis of the data during the training of the model. This resulted in a set of 7 features which broke away from the pack in terms of their Gini score and thus of greater importance in terms of partitioning the data.
+
+We trained the model utilizing a random forest algorithm using 5-fold cross validation.
+
+```{r cache=TRUE, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+# Create model on all columns for use with varImp
+modFit <- trainRF(train.set)
+vi <- varImp(modFit$finalModel)
+# Top 7 important columns as identified by varImp
+viColumns <- row.names(vi)[order(-vi$Overall)][1:7]
+train.set.viColumns <- train.set[, c(viColumns, "classe")]
+varImpPlot(modFit$finalModel, main = "Variable Rank")
+```
+
+We used the two feature sets we derived from the analysis above to train separate models for comparison. Initially we believed that the set of features we found by evaluating the uniqueness of the values would perform substantially better than those discovered via the variable importance route. Given the fact that the former represents 16 features as compared to the 7 features in the later case it seemed likely that the predictive power of features with greater variance would win out. 
+
+# Validation
+
+```{r cache=TRUE, echo=FALSE}
+# Create model and test it against the validation set
+modFit.nzvColumns <- trainRF(train.set.nzvColumns)
+predict.nzvColumns <- predict(modFit.nzvColumns, validation.set[, nzvColumns])
+cm.nzvColumns <- confusionMatrix(validation.set$classe, predict.nzvColumns)
+
+modFit.viColumns <- trainRF(train.set.viColumns)
+predict.viColumns <- predict(modFit.viColumns, validation.set[, viColumns])
+cm.viColumns <- confusionMatrix(validation.set$classe, predict.viColumns)
+```
+
+In order to evaluate both of these models, we performed a prediction using the validation set on both to get a sense of their out-of-sample performance and employed a confusion matrix to evaluate their effectiveness.
+
+In the case of the features selected due to their overall uniqueness, we found an accuracy of `r round(cm.nzvColumns$overall['Accuracy'] * 100, 2)`%.
+
+In the case of the features selected due to their overall importance, we found an accuracy of `r round(cm.viColumns$overall['Accuracy'] * 100, 2)`%.
+
+To our suprise, we discovered that the the overall accuracy of the smaller feature set derived from variable importance performed only slightly worse than the larger feature set based on variable uniqueness. As a result, we decided to utilize this smaller feature set to evaluate the test data set.
+
+# Test
+
+As noted above, we reserved 20% of the data set for testing. We applied the 7-feature model to the test set to measure its performance.
+
+```{r echo=FALSE, message=FALSE}
+# Test using viColumns
+predict.viColumns <- predict(modFit.viColumns, test.set[, viColumns])
+cm.viColumns <- confusionMatrix(test.set$classe, predict.viColumns)
+```
+
+The accuracy of this model was `r round(cm.viColumns$overall['Accuracy'] * 100, 2)`%.
+
+# Conclusion
+
+In future, we might pursue combining the results of the uniqueness percentages with those of the variable importance to come up with an even smaller set of features to make our model. As just over half of the features from the variable importance list were in the larger percentage uniqueness list there is enough overlap to suggest it may be of use. 
+
+We found that we were able to use 7 features (or 4.375% of the original data) to achieve an accuracy of over 98% with our test set.

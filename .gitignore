@@ -15,3 +15,7 @@ vignettes/*.pdf
 data
 .RData
 results
+
+# knitr
+index_cache/
+index_files/
