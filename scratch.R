@@ -8,8 +8,11 @@ library(doParallel)
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 
-preProcessData = function(x) {
-  data <- read.csv(x, na.strings = c("NA", "", "#DIV/0!"))
+readData = function(fn) {
+  read.csv(paste0("data/", fn), na.strings = c("NA", "", "#DIV/0!"))
+}
+
+preProcessData = function(data) {
   cat("[preProcessData] Original dimensions: ", 
       dim(data), 
       "\n")
@@ -44,12 +47,14 @@ timedTrain = function(data) {
                   method="rf", 
                   trControl = trainControl(method = "cv", 
                                            number = 5))
-  Sys.time() - startTime # Time required to train model
+  print(Sys.time() - startTime) # Time required to train model
   
   modFit
 }
 
-pml_training.data <- preProcessData("data/pml-training.csv")
+#summary(readData("pml-training.csv"))
+
+pml_training.data <- preProcessData(readData("pml-training.csv"))
 
 set.seed(13413)
 
@@ -65,7 +70,7 @@ validation.set <- other.set[-otherDP,]
 nzv <- nearZeroVar(train.set, saveMetrics = TRUE)
 nzv[order(-nzv$percentUnique),] 
 # Top 10 columns based on unique values > 10%
-nzvColumns <- row.names(nzv[order(-nzv$percentUnique),])[1:16]
+nzvColumns <- row.names(nzv)[order(-nzv$percentUnique)][1:16]
 train.set.nzvColumns <- train.set[, c(nzvColumns, "classe")]
 
 # Find columns highly correlated with last variable (ie, yaw_forearm)
@@ -78,7 +83,7 @@ modFit <- timedTrain(train.set)
 varImpPlot(modFit$finalModel)
 vi <- varImp(modFit$finalModel)
 # Top 7 important columns as identified by varImp
-viColumns <- row.names(vi[order(-vi$Overall),])[1:7]
+viColumns <- row.names(vi)[order(-vi$Overall)][1:7]
 train.set.viColumns <- train.set[, c(viColumns, "classe")]
 
 # Create model and test it against the validation set
@@ -95,9 +100,9 @@ predict.viColumns <- predict(modFit.viColumns, test.set[, viColumns])
 confusionMatrix(test.set$classe, predict.viColumns)
 
 # Generate predictions on provided test data
-pml_testing.data <- preProcessData("data/pml-testing.csv")
+pml_testing.data <- preProcessData(readData("pml-testing.csv"))
 # TODO: only predict against vi columns
-pml_testing.pred <- predict(modFit, pml_testing.data)
+pml_testing.pred <- predict(modFit.viColumns, pml_testing.data)
 
 # Write out results of testing predication
 pml_write_files(pml_testing.pred)
