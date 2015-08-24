@@ -32,7 +32,7 @@ trainRF = function(data) {
 
 # Introduction
 
-The [Human Activity Recognition Project](http://groupware.les.inf.puc-rio.br/har) undertook a study to evaluate the effectiveness of participants executing a weight-lifting task using accelerometer, gyroscope and magnetometer readings from the subjects (see [Qualitative activity recognition of weight lifting exercises](http://dx.doi.org/10.1145/2459236.2459256)). The authors of the paper refer to this as "qualitative activity recognition" and distinguish it from earlier approaches which have instead attempted to evaluate the type of activity performed. The subjects were asked to perform one set of 10 repetitions of the unilateral dumbbell biceps curl using 5 different approaches. One of these is considered correct while the rest model a set of commonly made mistakes.
+The [Human Activity Recognition Project](http://groupware.les.inf.puc-rio.br/har) undertook a study to evaluate the effectiveness of participants executing a weight-lifting task using accelerometer, gyroscope and magnetometer readings from the subjects (see @Velloso:2013:QAR:2459236.2459256). The authors of the paper refer to this as "qualitative activity recognition" and distinguish it from earlier approaches which have instead attempted to evaluate the type of activity performed. The subjects were asked to perform one set of 10 repetitions of the unilateral dumbbell biceps curl using 5 different approaches. One of these is considered correct while the rest model a set of commonly made mistakes.
 
 The data set is made up of 19622 observations and contains 160 features for each observation including one which indicates which of the 5 different methods the participant executed. 
 
@@ -63,12 +63,13 @@ validation.set <- other.set[-otherDP,]
 
 In an effort to further reduce the dimensionality of the data, we explored the data with an eye to removing features that do not provide much variability by looking at the percentage of unique values for each feature. We found that 16 features had a uniqueness factor of over 10%. 
 
-```{r xtable, results="asis", echo=FALSE}
+```{r echo=FALSE}
 nzv <- nearZeroVar(train.set, saveMetrics = TRUE)
 # Top 10 columns based on unique values > 10%
 nzvColumns <- row.names(nzv)[order(-nzv$percentUnique)][1:16]
 train.set.nzvColumns <- train.set[, c(nzvColumns, "classe")]
-kable(data.frame(Column=row.names(nzv[order(-nzv$percentUnique),]), Uniqueness=nzv[order(-nzv$percentUnique),]$percentUnique))
+df <- data.frame(Column=row.names(nzv[order(-nzv$percentUnique),]), Uniqueness=nzv[order(-nzv$percentUnique),]$percentUnique)
+kable(head(df, n = 16L))
 ```
 
 We also decided to evaluate the features that contributed most greatly to the analysis of the data during the training of the model. This resulted in a set of 7 features which broke away from the pack in terms of their Gini score and thus of greater importance in terms of partitioning the data.
@@ -125,3 +126,5 @@ The accuracy of this model was `r round(cm.viColumns$overall['Accuracy'] * 100, 
 In future, we might pursue combining the results of the uniqueness percentages with those of the variable importance to come up with an even smaller set of features to make our model. As just over half of the features from the variable importance list were in the larger percentage uniqueness list there is enough overlap to suggest it may be of use. 
 
 We found that we were able to use 7 features (or 4.375% of the original data) to achieve an accuracy of over 98% with our test set.
+
+# References
